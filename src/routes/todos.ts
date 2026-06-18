@@ -1,13 +1,12 @@
 import { PrismaClient } from '@prisma/client';
 import express from 'express';
 import type { NextFunction, Request, Response } from 'express';
-import type { Todo, TodoBody, PatchTodoBody, TodoParams } from '../types.js';
+import type { TodoParams } from '../types.js';
 import { AppError } from '../types.js'
 
 const router = express.Router()
 
 const prisma = new PrismaClient()
-
 
 router.get('/', async (req, res, next) => {
     try {
@@ -46,12 +45,13 @@ router.post('/', async (req: Request, res: Response, next: NextFunction) => {
 router.patch('/:id', async (req: Request<TodoParams, {}, {}>, res: Response, next: NextFunction) => {
     try{
         const { id } = req.params
-    
-        const todo = await prisma.todo.update({ where: { id }, data: req.body });
-    
-        if (!todo) {
+
+        const findTodo = await prisma.todo.findUnique({ where: { id } })
+        if(!findTodo){
             throw new AppError(404, 'Todo not found')
         }
+    
+        await prisma.todo.update({ where: { id }, data: req.body });
 
         return res.json('todo updated')
     }catch(err){
@@ -64,7 +64,12 @@ router.delete('/:id', async (req: Request<TodoParams, {}, {}>, res: Response, ne
     try{
         const { id } = req.params
     
-        const removeTodo = await prisma.todo.delete({ where: { id } })
+        const findTodo = await prisma.todo.findUnique({ where: { id } })
+        if(!findTodo){
+            throw new AppError(404, 'Todo not found')
+        }
+
+        await prisma.todo.delete({ where: { id } })
     
         return res.status(200).json('todo removed');
     }catch(err){
